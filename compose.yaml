@@ -26,6 +26,7 @@ services:
       CARGO_BUILD_JOBS: ${CARGO_BUILD_JOBS:-3}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - rust-rustup:/home/runner/.rustup
       - rust-cargo-home:/home/runner/.cache/argus/cargo-home
       - rust-cargo-target:/home/runner/.cache/argus/cargo-target
 
@@ -52,6 +53,7 @@ services:
       - general-pnpm-store:/home/runner/.cache/argus/pnpm
 
 volumes:
+  rust-rustup:
   rust-cargo-home:
   rust-cargo-target:
   general-pnpm-store:
