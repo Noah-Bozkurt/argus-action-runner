@@ -31,7 +31,12 @@ RUN apt-get update \
         "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${compose_arch}" \
         -o /usr/local/lib/docker/cli-plugins/docker-compose \
     && chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose \
-    && docker compose version
+    && docker compose version \
+    && install -d -o runner -g docker -m 0755 \
+        /home/runner/.cache/argus \
+        /home/runner/.cache/argus/cargo-home \
+        /home/runner/.cache/argus/cargo-target \
+        /home/runner/.cache/argus/pnpm
 
 COPY --chown=runner:docker entrypoint.sh /usr/local/bin/argus-runner-entrypoint
 RUN chmod 0755 /usr/local/bin/argus-runner-entrypoint
