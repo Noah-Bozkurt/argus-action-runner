@@ -1,22 +1,60 @@
+x-runner-environment: &runner-environment
+  RUNNER_URL: ${RUNNER_URL:-https://github.com/Noah-Bozkurt}
+  RUNNER_SCOPE: ${RUNNER_SCOPE:-org}
+  RUNNER_GROUP: ${RUNNER_GROUP:-}
+  RUNNER_CFG_PAT_FILE: /run/secrets/runner_pat
+
+x-runner-common: &runner-common
+  image: ghcr.io/noah-bozkurt/argus-action-runner:main
+  restart: unless-stopped
+  init: true
+  group_add:
+    - "${DOCKER_GID:?Set DOCKER_GID to the group ID of /var/run/docker.sock}"
+  secrets:
+    - runner_pat
+  stop_grace_period: 30s
+
 services:
-  runner:
-    image: ghcr.io/noah-bozkurt/argus-action-runner:main
-    restart: unless-stopped
-    init: true
+  runner-rust:
+    <<: *runner-common
     environment:
-      RUNNER_URL: ${RUNNER_URL:-https://github.com/Noah-Bozkurt}
-      RUNNER_SCOPE: ${RUNNER_SCOPE:-org}
-      RUNNER_NAME_PREFIX: ${RUNNER_NAME_PREFIX:-argus-runner}
-      RUNNER_LABELS: ${RUNNER_LABELS:-argus,docker}
-      RUNNER_GROUP: ${RUNNER_GROUP:-}
-      RUNNER_CFG_PAT_FILE: /run/secrets/runner_pat
-    group_add:
-      - "${DOCKER_GID:?Set DOCKER_GID to the group ID of /var/run/docker.sock}"
+      <<: *runner-environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-rust
+      RUNNER_LABELS: ${RUNNER_RUST_LABELS:-argus,docker,rust}
+      CARGO_HOME: /home/runner/.cache/argus/cargo-home
+      CARGO_TARGET_DIR: /home/runner/.cache/argus/cargo-target
+      CARGO_BUILD_JOBS: ${CARGO_BUILD_JOBS:-3}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    secrets:
-      - runner_pat
-    stop_grace_period: 30s
+      - rust-cargo-home:/home/runner/.cache/argus/cargo-home
+      - rust-cargo-target:/home/runner/.cache/argus/cargo-target
+
+  runner-general-1:
+    <<: *runner-common
+    environment:
+      <<: *runner-environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-general-1
+      RUNNER_LABELS: ${RUNNER_GENERAL_LABELS:-argus,docker,general}
+      ARGUS_PNPM_STORE_DIR: /home/runner/.cache/argus/pnpm
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - general-pnpm-store:/home/runner/.cache/argus/pnpm
+
+  runner-general-2:
+    <<: *runner-common
+    environment:
+      <<: *runner-environment
+      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-general-2
+      RUNNER_LABELS: ${RUNNER_GENERAL_LABELS:-argus,docker,general}
+      ARGUS_PNPM_STORE_DIR: /home/runner/.cache/argus/pnpm
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - general-pnpm-store:/home/runner/.cache/argus/pnpm
+
+volumes:
+  rust-cargo-home:
+  rust-cargo-target:
+  general-pnpm-store:
 
 secrets:
   runner_pat:
