@@ -12,9 +12,11 @@ ghcr.io/noah-bozkurt/argus-action-runner:main
 
 The supplied Compose file runs three explicit runners on one Docker host instead of three identical scaled replicas:
 
-- `argus-runner-rust` — labels `argus,docker,rust`; owns persistent Rust toolchain, Cargo home and target caches.
-- `argus-runner-general-1` — labels `argus,docker,general`; shares a persistent pnpm store with the second general runner.
-- `argus-runner-general-2` — labels `argus,docker,general`; shares the same persistent pnpm store.
+- Rust runner — labels `argus,docker,rust`; owns persistent Rust toolchain, Cargo home and target caches.
+- General runner 1 — labels `argus,docker,general`; shares a persistent pnpm store with the second general runner.
+- General runner 2 — labels `argus,docker,general`; shares the same persistent pnpm store.
+
+Runner names keep the role in their prefix and append the container hostname, for example `argus-runner-rust-<container-id>`. This keeps registrations unique if the same Compose setup is later used on more than one host.
 
 This keeps Rust work on one warm runner and avoids repeatedly uploading and downloading large GitHub Actions caches. `CARGO_BUILD_JOBS` defaults to `3`, so Cargo does not try to consume every CPU on the host while general jobs are running.
 
@@ -73,7 +75,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Then confirm GitHub shows `argus-runner-rust`, `argus-runner-general-1`, and `argus-runner-general-2` online before changing consuming workflows to require the new `rust` or `general` labels.
+Then confirm GitHub shows one online runner with the `rust` label and two with the `general` label before merging a consuming workflow that requires those labels.
 
 The named cache volumes survive normal container recreation. Remove them only when you intentionally want a cold cache:
 
@@ -105,7 +107,7 @@ Keeping `CARGO_TARGET_DIR` outside the checked-out repository is important becau
 | --- | --- | --- |
 | `RUNNER_URL` | `https://github.com/Noah-Bozkurt` | Organization or repository URL to register against |
 | `RUNNER_SCOPE` | `org` | `org` or `repo` |
-| `RUNNER_NAME_PREFIX` | `argus-runner` | Prefix for the three fixed runner names |
+| `RUNNER_NAME_PREFIX` | `argus-runner` | Base prefix; each role and container hostname are appended automatically |
 | `RUNNER_RUST_LABELS` | `argus,docker,rust` | Labels assigned to the Rust runner |
 | `RUNNER_GENERAL_LABELS` | `argus,docker,general` | Labels assigned to both general runners |
 | `RUNNER_GROUP` | unset | Optional organization runner group |
@@ -115,6 +117,8 @@ Keeping `CARGO_TARGET_DIR` outside the checked-out repository is important becau
 `RUNNER_CFG_PAT_FILE` is used by the supplied Compose file so the PAT is mounted as a file instead of being passed to workflow processes as an environment variable. The entrypoint also unsets registration credentials before starting the runner.
 
 A one-time GitHub runner registration token can alternatively be supplied as `RUNNER_TOKEN`, but automatic registration and clean deregistration across container recreation require the fine-grained PAT.
+
+The entrypoint still supports advanced `RUNNER_EPHEMERAL` and `RUNNER_DISABLE_UPDATE` environment variables when you need to override the default persistent-runner behavior.
 
 ## Docker access
 
