@@ -33,6 +33,7 @@ RUN apt-get update \
     && chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose \
     && docker compose version \
     && install -d -o runner -g docker -m 0755 \
+        /home/runner/.rustup \
         /home/runner/.cache/argus \
         /home/runner/.cache/argus/cargo-home \
         /home/runner/.cache/argus/cargo-target \
