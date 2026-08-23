@@ -8,6 +8,18 @@ The image is published as:
 ghcr.io/noah-bozkurt/argus-action-runner:main
 ```
 
+## Runner layout
+
+The supplied Compose file runs three explicit runners on one Docker host instead of three identical scaled replicas:
+
+- Rust runner — labels `argus,docker,rust`; owns persistent Rust toolchain, Cargo home and target caches.
+- General runner 1 — labels `argus,docker,general`; shares a persistent pnpm store with the second general runner.
+- General runner 2 — labels `argus,docker,general`; shares the same persistent pnpm store.
+
+Runner names keep the role in their prefix and append the container hostname, for example `argus-runner-rust-<container-id>`. This keeps registrations unique if the same Compose setup is later used on more than one host.
+
+This keeps Rust work on one warm runner and avoids repeatedly uploading and downloading large GitHub Actions caches. `CARGO_BUILD_JOBS` defaults to `3`, so Cargo does not try to consume every CPU on the host while general jobs are running.
+
 ## What is included
 
 - GitHub Actions runner 2.336.0
@@ -15,8 +27,9 @@ ghcr.io/noah-bozkurt/argus-action-runner:main
 - Docker Compose 5.4.0
 - Common Rust/native build dependencies (`build-essential`, `pkg-config`, OpenSSL headers)
 - Git, curl, jq, Python 3, rsync, shellcheck and zstd
+- Writable cache directories under `/home/runner/.cache/argus`
 
-Rust, Node.js and pnpm versions remain controlled by the consuming workflow (`dtolnay/rust-toolchain`, `actions/setup-node`, and `pnpm/action-setup`) instead of being baked into this image.
+Rust, Node.js and pnpm versions remain controlled by the consuming workflow (`dtolnay/rust-toolchain`, `actions/setup-node`, and `pnpm/action-setup`) so repository CI remains explicit about tool versions. The expensive toolchain/package/build state is persisted locally by Compose instead of using remote GitHub cache archives.
 
 ## Run it
 
@@ -32,25 +45,61 @@ chmod 600 .env secrets/runner_pat
 
 For an organization-scoped runner, use a fine-grained token with **Self-hosted runners: Read and write** organization permission. For a repository-scoped runner, use **Administration: Read and write** on that repository.
 
-Start one runner:
+Start all three runners:
 
 ```bash
 docker compose up -d
 ```
 
-Start multiple runners for concurrent jobs:
+Do not use `--scale runner=3`; the services are intentionally separate so GitHub can route Rust and general workloads differently.
 
-```bash
-docker compose up -d --scale runner=3
-```
-
-Each replica registers with a unique name based on its container hostname and receives the custom labels `argus` and `docker`. GitHub automatically adds the normal `self-hosted`, OS, and architecture labels.
-
-Use it from a workflow with:
+Use the Rust runner from a workflow with:
 
 ```yaml
-runs-on: [self-hosted, linux, x64, argus]
+runs-on: [self-hosted, linux, x64, argus, rust]
 ```
+
+Use either general runner with:
+
+```yaml
+runs-on: [self-hosted, linux, x64, argus, general]
+```
+
+## Updating an existing scaled installation
+
+After this change is published, replace the old scaled `runner` service with the explicit services:
+
+```bash
+docker compose down --remove-orphans
+docker compose pull
+docker compose up -d
+```
+
+Then confirm GitHub shows one online runner with the `rust` label and two with the `general` label before merging a consuming workflow that requires those labels.
+
+The named cache volumes survive normal container recreation. Remove them only when you intentionally want a cold cache:
+
+```bash
+docker compose down -v
+```
+
+## Persistent caches
+
+The Rust runner mounts:
+
+```text
+/home/runner/.rustup
+/home/runner/.cache/argus/cargo-home
+/home/runner/.cache/argus/cargo-target
+```
+
+The two general runners share:
+
+```text
+/home/runner/.cache/argus/pnpm
+```
+
+Keeping `CARGO_TARGET_DIR` outside the checked-out repository is important because `actions/checkout` can clean workspace-local `target/` directories on reused self-hosted runners.
 
 ## Configuration
 
@@ -58,17 +107,18 @@ runs-on: [self-hosted, linux, x64, argus]
 | --- | --- | --- |
 | `RUNNER_URL` | `https://github.com/Noah-Bozkurt` | Organization or repository URL to register against |
 | `RUNNER_SCOPE` | `org` | `org` or `repo` |
-| `RUNNER_NAME_PREFIX` | `argus-runner` | Prefix for automatically generated runner names |
-| `RUNNER_NAME` | unset | Optional fixed runner name; avoid this when scaling |
-| `RUNNER_LABELS` | `argus,docker` | Comma-separated custom labels |
+| `RUNNER_NAME_PREFIX` | `argus-runner` | Base prefix; each role and container hostname are appended automatically |
+| `RUNNER_RUST_LABELS` | `argus,docker,rust` | Labels assigned to the Rust runner |
+| `RUNNER_GENERAL_LABELS` | `argus,docker,general` | Labels assigned to both general runners |
 | `RUNNER_GROUP` | unset | Optional organization runner group |
-| `RUNNER_EPHEMERAL` | `false` | Register the runner for one job only |
-| `RUNNER_DISABLE_UPDATE` | `false` | Disable the runner's built-in self-update |
+| `CARGO_BUILD_JOBS` | `3` | Maximum parallel Cargo build jobs on the Rust runner |
 | `DOCKER_GID` | required | Group ID owning the host Docker socket |
 
 `RUNNER_CFG_PAT_FILE` is used by the supplied Compose file so the PAT is mounted as a file instead of being passed to workflow processes as an environment variable. The entrypoint also unsets registration credentials before starting the runner.
 
 A one-time GitHub runner registration token can alternatively be supplied as `RUNNER_TOKEN`, but automatic registration and clean deregistration across container recreation require the fine-grained PAT.
+
+The entrypoint still supports advanced `RUNNER_EPHEMERAL` and `RUNNER_DISABLE_UPDATE` environment variables when you need to override the default persistent-runner behavior.
 
 ## Docker access
 
