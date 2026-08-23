@@ -19,7 +19,7 @@ services:
     <<: *runner-common
     environment:
       <<: *runner-environment
-      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-rust
+      RUNNER_NAME_PREFIX: ${RUNNER_NAME_PREFIX:-argus-runner}-rust
       RUNNER_LABELS: ${RUNNER_RUST_LABELS:-argus,docker,rust}
       CARGO_HOME: /home/runner/.cache/argus/cargo-home
       CARGO_TARGET_DIR: /home/runner/.cache/argus/cargo-target
@@ -34,7 +34,7 @@ services:
     <<: *runner-common
     environment:
       <<: *runner-environment
-      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-general-1
+      RUNNER_NAME_PREFIX: ${RUNNER_NAME_PREFIX:-argus-runner}-general-1
       RUNNER_LABELS: ${RUNNER_GENERAL_LABELS:-argus,docker,general}
       ARGUS_PNPM_STORE_DIR: /home/runner/.cache/argus/pnpm
     volumes:
@@ -45,7 +45,7 @@ services:
     <<: *runner-common
     environment:
       <<: *runner-environment
-      RUNNER_NAME: ${RUNNER_NAME_PREFIX:-argus-runner}-general-2
+      RUNNER_NAME_PREFIX: ${RUNNER_NAME_PREFIX:-argus-runner}-general-2
       RUNNER_LABELS: ${RUNNER_GENERAL_LABELS:-argus,docker,general}
       ARGUS_PNPM_STORE_DIR: /home/runner/.cache/argus/pnpm
     volumes:
