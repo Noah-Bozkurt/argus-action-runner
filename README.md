@@ -12,7 +12,7 @@ ghcr.io/noah-bozkurt/argus-action-runner:main
 
 The supplied Compose file runs three explicit runners on one Docker host instead of three identical scaled replicas:
 
-- `argus-runner-rust` — labels `argus,docker,rust`; owns persistent Cargo home and target caches.
+- `argus-runner-rust` — labels `argus,docker,rust`; owns persistent Rust toolchain, Cargo home and target caches.
 - `argus-runner-general-1` — labels `argus,docker,general`; shares a persistent pnpm store with the second general runner.
 - `argus-runner-general-2` — labels `argus,docker,general`; shares the same persistent pnpm store.
 
@@ -27,7 +27,7 @@ This keeps Rust work on one warm runner and avoids repeatedly uploading and down
 - Git, curl, jq, Python 3, rsync, shellcheck and zstd
 - Writable cache directories under `/home/runner/.cache/argus`
 
-Rust, Node.js and pnpm versions remain controlled by the consuming workflow (`dtolnay/rust-toolchain`, `actions/setup-node`, and `pnpm/action-setup`) so repository CI remains explicit about tool versions. The expensive package/build state is persisted locally by Compose instead of using remote GitHub cache archives.
+Rust, Node.js and pnpm versions remain controlled by the consuming workflow (`dtolnay/rust-toolchain`, `actions/setup-node`, and `pnpm/action-setup`) so repository CI remains explicit about tool versions. The expensive toolchain/package/build state is persisted locally by Compose instead of using remote GitHub cache archives.
 
 ## Run it
 
@@ -86,6 +86,7 @@ docker compose down -v
 The Rust runner mounts:
 
 ```text
+/home/runner/.rustup
 /home/runner/.cache/argus/cargo-home
 /home/runner/.cache/argus/cargo-target
 ```
