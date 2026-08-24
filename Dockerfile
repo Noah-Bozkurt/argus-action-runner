@@ -34,6 +34,8 @@ RUN apt-get update \
     && docker compose version \
     && install -d -o runner -g docker -m 0755 \
         /home/runner/.rustup \
+        /home/runner/.cache \
+        /home/runner/.cache/pnpm \
         /home/runner/.cache/argus \
         /home/runner/.cache/argus/cargo-home \
         /home/runner/.cache/argus/cargo-target \

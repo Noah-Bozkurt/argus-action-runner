@@ -40,6 +40,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - general-pnpm-store:/home/runner/.cache/argus/pnpm
+      - general-pnpm-cache:/home/runner/.cache/pnpm
 
   runner-general-2:
     <<: *runner-common
@@ -51,12 +52,14 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - general-pnpm-store:/home/runner/.cache/argus/pnpm
+      - general-pnpm-cache:/home/runner/.cache/pnpm
 
 volumes:
   rust-rustup:
   rust-cargo-home:
   rust-cargo-target:
   general-pnpm-store:
+  general-pnpm-cache:
 
 secrets:
   runner_pat:
