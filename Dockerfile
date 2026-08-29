@@ -1,4 +1,4 @@
-FROM ghcr.io/actions/actions-runner:2.336.0
+FROM ghcr.io/actions/actions-runner:2.337.0
 
 ARG TARGETARCH
 ARG DOCKER_COMPOSE_VERSION=5.4.0
